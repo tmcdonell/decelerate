@@ -1,0 +1,193 @@
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeOperators #-}
+
+module Smart (
+  Arrays(..),
+  module Smart
+) where
+
+import Tuple
+import Pretty                   ()
+import AST                      (Arrays)
+import Array.Sugar
+import qualified AST
+
+import Data.Typeable
+
+
+data Layout env env' where
+  EmptyLayout :: Layout env ()
+  PushLayout  :: Typeable t
+              => Layout env env' -> AST.Idx env t -> Layout env (env', t)
+
+prjLayout :: Typeable t => Int -> Layout env env' -> AST.Idx env t
+prjLayout  0 (PushLayout _   ix) | Just ix' <- gcast ix = ix'
+prjLayout !n (PushLayout lyt _)                         = prjLayout (n-1) lyt
+prjLayout  _ _                                          = error "prjLayout: inconsistent valuation"
+
+
+-- Array computations
+-- ------------------
+
+data Acc a where
+  Atag          :: Arrays arrs
+                => Int
+                -> Acc arrs
+
+  Use           :: Arrays arrs
+                => arrs
+                -> Acc arrs
+
+  Map           :: (Elt a, Elt b, Shape sh)
+                => (Exp a -> Exp b)
+                -> Acc (Array sh a)
+                -> Acc (Array sh b)
+
+  Fold          :: (Elt e, Shape sh)
+                => (Exp e -> Exp e -> Exp e)
+                -> Exp e
+                -> Acc (Array (sh:.Int) e)
+                -> Acc (Array sh e)
+
+
+-- Scalar expressions
+-- ------------------
+
+data Exp e where
+  Tag           :: Elt e => Int -> Exp e
+  Const         :: Elt e => e   -> Exp e
+  Prj           :: (Elt t, IsTuple t)
+                => TupleIdx (TupleRepr t) e -> Exp t -> Exp e
+  Tuple         :: (Elt t, IsTuple t)
+                => Tuple.Tuple Exp (TupleRepr t) -> Exp t
+  PrimApp       :: (Elt a, Elt r)
+                => AST.PrimFun (a -> r) -> Exp a -> Exp r
+  IndexScalar   :: (Shape sh, Elt e)
+                => Acc (Array sh e) -> Exp sh -> Exp e
+
+
+-- HOAS to de Bruijn conversion
+-- ----------------------------
+
+convertAcc :: Arrays a => Acc a -> AST.Acc a
+convertAcc = convertOpenAcc EmptyLayout
+
+convertExp :: Layout aenv aenv -> Exp e -> AST.Exp aenv e
+convertExp = convertOpenExp EmptyLayout
+
+
+convertOpenAcc :: Layout aenv aenv
+               -> Acc a
+               -> AST.OpenAcc aenv a
+convertOpenAcc alyt acc =
+  case acc of
+    Atag n      -> AST.Avar (prjLayout n alyt)
+    Use arr     -> AST.Use arr
+    Map f a     -> AST.Map (convertFun1 alyt f) (convertOpenAcc alyt a)
+    Fold f e a  -> AST.Fold (convertFun2 alyt f) (convertExp alyt e) (convertOpenAcc alyt a)
+
+
+convertOpenExp :: forall env aenv e.
+                  Layout env  env
+               -> Layout aenv aenv
+               -> Exp e
+               -> AST.OpenExp env aenv e
+convertOpenExp lyt alyt = cvt
+  where
+    cvt :: Exp t -> AST.OpenExp env aenv t
+    cvt (Tag n)            = AST.Var (prjLayout n lyt)
+    cvt (Const c)          = AST.Const (fromElt c)
+    cvt (Prj ix t)         = AST.Prj ix (cvt t)
+    cvt (Tuple tup)        = AST.Tuple (convertTuple lyt alyt tup)
+    cvt (PrimApp f a)      = AST.PrimApp f (cvt a)
+    cvt (IndexScalar a ix) = AST.IndexScalar (convertOpenAcc alyt a) (cvt ix)
+
+
+convertAtuple :: forall aenv t.
+                 Layout aenv aenv
+              -> Tuple.Tuple Acc t
+              -> Tuple.Tuple (AST.OpenAcc aenv) t
+convertAtuple alyt = cvt
+  where
+    cvt :: Tuple.Tuple Acc tup -> Tuple.Tuple (AST.OpenAcc aenv) tup
+    cvt NilTup         = NilTup
+    cvt (SnocTup as a) = cvt as `SnocTup` convertOpenAcc alyt a
+
+
+convertTuple :: forall env aenv t.
+                Layout env  env
+             -> Layout aenv aenv
+             -> Tuple.Tuple Exp t
+             -> Tuple.Tuple (AST.OpenExp env aenv) t
+convertTuple lyt alyt = cvt
+  where
+    cvt :: Tuple.Tuple Exp tup -> Tuple.Tuple (AST.OpenExp env aenv) tup
+    cvt NilTup         = NilTup
+    cvt (SnocTup es e) = cvt es `SnocTup` convertOpenExp lyt alyt e
+
+
+convertFun1 :: Elt a
+            => Layout aenv aenv
+            -> (Exp a -> Exp b)
+            -> AST.Fun aenv (a -> b)
+convertFun1 alyt f = AST.Lam (AST.Body openF)
+  where
+    a     = Tag 0
+    lyt   = EmptyLayout `PushLayout` AST.ZeroIdx
+    openF = convertOpenExp lyt alyt (f a)
+
+convertFun2 :: (Elt a, Elt b)
+            => Layout aenv aenv
+            -> (Exp a -> Exp b -> Exp c)
+            -> AST.Fun aenv (a -> b -> c)
+convertFun2 alyt f = AST.Lam (AST.Lam (AST.Body openF))
+  where
+    a     = Tag 1
+    b     = Tag 0
+    lyt   = EmptyLayout `PushLayout` AST.SuccIdx AST.ZeroIdx
+                        `PushLayout` AST.ZeroIdx
+    openF = convertOpenExp lyt alyt (f a b)
+
+
+-- Tuples
+-- ------
+
+tup2 :: (Elt a, Elt b) => (Exp a, Exp b) -> Exp (a, b)
+tup2 (x, y) = Tuple $ NilTup `SnocTup` x `SnocTup` y
+
+tup3 :: (Elt a, Elt b, Elt c) => (Exp a, Exp b, Exp c) -> Exp (a, b, c)
+tup3 (x, y, z) = Tuple $ NilTup `SnocTup` x `SnocTup` y `SnocTup` z
+
+untup2 :: (Elt a, Elt b) => Exp (a, b) -> (Exp a, Exp b)
+untup2 t = ( SuccTupIdx ZeroTupIdx `Prj` t
+           , ZeroTupIdx `Prj` t)
+
+untup3 :: (Elt a, Elt b, Elt c) => Exp (a, b, c) -> (Exp a, Exp b, Exp c)
+untup3 t = ( SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
+           , SuccTupIdx ZeroTupIdx `Prj` t
+           , ZeroTupIdx `Prj` t)
+
+
+-- Instances
+-- ---------
+
+instance Arrays a => Show (Acc a) where
+  show = show . convertAcc
+
+instance Show (Exp e) where
+  show = show . convertOpenExp EmptyLayout EmptyLayout
+
+instance Elt e => Eq (Exp e) where
+  (==) = error "Prelude.(==) applied to EDSL types"
+
+instance (Num e, Elt e) => Num (Exp e) where
+  x + y       = AST.PrimAdd `PrimApp` tup2 (x,y)
+  x * y       = AST.PrimMul `PrimApp` tup2 (x,y)
+  fromInteger = Const . fromInteger
+
+  abs    = error "abs: not defined"
+  signum = error "signum: not defined"
+
