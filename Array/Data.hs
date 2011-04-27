@@ -11,6 +11,5 @@ instance ArrayElt ()
 instance ArrayElt Int
 instance ArrayElt Float
 
-instance (ArrayElt a, ArrayElt b)             => ArrayElt (a, b)
-instance (ArrayElt a, ArrayElt b, ArrayElt c) => ArrayElt (a, b, c)
+instance (ArrayElt a, ArrayElt b) => ArrayElt (a, b)
 
