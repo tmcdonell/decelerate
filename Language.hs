@@ -4,7 +4,7 @@ module Language where
 
 import Smart
 import Array.Sugar
-import Prelude          hiding (curry, uncurry)
+import Prelude          hiding (map, zipWith, curry, uncurry)
 
 
 -- Array computations

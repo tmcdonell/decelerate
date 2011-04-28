@@ -39,6 +39,7 @@ prettyOpenAcc !alvl wrap acc =
           ,       text "in"  <+> body ]
 
     Aprj ix arrs -> wrap $ int (tupleIdxToInt ix) <+> prettyOpenAcc alvl parens arrs
+    Atuple tup   -> prettyAtuple alvl tup
     Use arrs     -> wrap $ prettyAccOp "use" [ prettyArrays (arrays (undefined::a)) arrs ]
 
     Map f arr    -> wrap $ prettyAccOp "map" [ prettyOpenFun 0 alvl f
@@ -91,8 +92,15 @@ prettyPrim PrimMul = text "(*)"
 -- Tuples
 -- ------
 
+prettyAtuple :: Int -> Tuple (OpenAcc aenv) t -> Doc
+prettyAtuple !alvl t = parens . sep . punctuate comma . reverse $ collect t
+  where
+    collect :: Tuple (OpenAcc aenv) t -> [Doc]
+    collect NilTup          = []
+    collect (SnocTup tup a) = prettyOpenAcc alvl id a : collect tup
+
 prettyTuple :: Int -> Int -> Tuple (OpenExp env aenv) t -> Doc
-prettyTuple !lvl !alvl t = parens . hsep . punctuate comma . reverse $ collect t
+prettyTuple !lvl !alvl t = parens . sep . punctuate comma . reverse $ collect t
   where
     collect :: Tuple (OpenExp env aenv) t -> [Doc]
     collect NilTup          = []

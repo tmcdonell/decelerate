@@ -25,6 +25,7 @@ evalOpenAcc acc aenv =
                    in  evalOpenAcc b (aenv `Push` a')
     Avar ix     -> prj ix aenv
     Aprj ix a   -> evalPrj ix (fromArr $ evalOpenAcc a aenv)
+    Atuple tup  -> evalAtup tup aenv
     Use arr     -> toArr arr
     Map f a     -> mapOp (evalFun f aenv) (evalOpenAcc a aenv)
     Fold f x a  -> foldOp (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
@@ -85,6 +86,15 @@ evalPrj ZeroTupIdx       (_,   e) = e
 evalPrj (SuccTupIdx ix') (tup, _) = evalPrj ix' tup
 
 
+evalAtup :: forall aenv arrs. Arrays arrs
+         => Tuple (OpenAcc aenv) (ArrRepr arrs)
+         -> Val aenv
+         -> arrs
+evalAtup t aenv = toArr (eval t)
+  where
+    eval :: Tuple (OpenAcc aenv) tup -> tup
+    eval NilTup           = ()
+    eval (SnocTup arrs a) = (eval arrs, evalOpenAcc a aenv)
 
 evalTup :: forall env aenv t. IsTuple t
         => Tuple (OpenExp env aenv) (TupleRepr t)

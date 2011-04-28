@@ -35,10 +35,10 @@ prj _             _            = error "prj: inconsistent valuation"
 type Acc a = OpenAcc () a
 
 data OpenAcc aenv a where
-  Alet      :: (Arrays a, Arrays b)
-            => OpenAcc aenv      a
-            -> OpenAcc (aenv, a) b
-            -> OpenAcc aenv      b
+  Alet      :: (Arrays as, Arrays bs)
+            => OpenAcc aenv as
+            -> OpenAcc (aenv, as) bs
+            -> OpenAcc aenv bs
 
   Avar      :: Arrays arrs
             => Idx aenv arrs
@@ -48,6 +48,10 @@ data OpenAcc aenv a where
             => TupleIdx (ArrRepr arrs) a
             -> OpenAcc aenv arrs
             -> OpenAcc aenv a
+
+  Atuple    :: Arrays arrs
+            => Tuple (OpenAcc aenv) (ArrRepr arrs)
+            -> OpenAcc aenv arrs
 
   Use       :: Arrays arrs
             => ArrRepr arrs

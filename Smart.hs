@@ -44,6 +44,10 @@ data Acc a where
                 -> Acc arrs
                 -> Acc a
 
+  Atuple        :: Arrays arrs
+                => Tuple Acc (ArrRepr arrs)
+                -> Acc arrs
+
   Use           :: Arrays arrs
                 => arrs
                 -> Acc arrs
@@ -93,6 +97,7 @@ convertOpenAcc alyt acc =
   case acc of
     Atag n      -> AST.Avar (prjLayout n alyt)
     Aprj ix a   -> AST.Aprj ix (convertOpenAcc alyt a)
+    Atuple tup  -> AST.Atuple (convertAtuple alyt tup)
     Use arr     -> AST.Use (fromArr arr)
     Map f a     -> AST.Map (convertFun1 alyt f) (convertOpenAcc alyt a)
     Fold f e a  -> AST.Fold (convertFun2 alyt f) (convertExp alyt e) (convertOpenAcc alyt a)
@@ -178,6 +183,12 @@ untup3 t = ( SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
            , SuccTupIdx ZeroTupIdx `Prj` t
            , ZeroTupIdx `Prj` t)
 
+
+arr2 :: (Arrays arrs, ArrRepr arrs ~ (((), a), b)) => (Acc a, Acc b) -> Acc arrs
+arr2 (xs, ys) = Atuple $ NilTup `SnocTup` xs `SnocTup` ys
+
+arr3 :: (Arrays arrs, ArrRepr arrs ~ ((((), a), b), c)) => (Acc a, Acc b, Acc c) -> Acc arrs
+arr3 (xs, ys, zs) = Atuple $ NilTup `SnocTup` xs `SnocTup` ys `SnocTup` zs
 
 unarr2 :: (Arrays arrs, ArrRepr arrs ~ (((), a), b)) => Acc arrs -> (Acc a, Acc b)
 unarr2 t = ( SuccTupIdx ZeroTupIdx `Aprj` t
