@@ -44,6 +44,11 @@ data OpenAcc aenv a where
             => Idx aenv arrs
             -> OpenAcc aenv arrs
 
+  Aprj      :: Arrays arrs
+            => TupleIdx (ArrRepr arrs) a
+            -> OpenAcc aenv arrs
+            -> OpenAcc aenv a
+
   Use       :: Arrays arrs
             => ArrRepr arrs
             -> OpenAcc aenv arrs

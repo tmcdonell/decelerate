@@ -38,6 +38,7 @@ prettyOpenAcc !alvl wrap acc =
       sep [ hang (text "let" <+> var <+> char '=') 2 lam
           ,       text "in"  <+> body ]
 
+    Aprj ix arrs -> wrap $ int (tupleIdxToInt ix) <+> prettyOpenAcc alvl parens arrs
     Use arrs     -> wrap $ prettyAccOp "use" [ prettyArrays (arrays (undefined::a)) arrs ]
 
     Map f arr    -> wrap $ prettyAccOp "map" [ prettyOpenFun 0 alvl f

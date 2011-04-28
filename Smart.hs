@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE BangPatterns #-}
@@ -36,6 +38,11 @@ data Acc a where
   Atag          :: Arrays arrs
                 => Int
                 -> Acc arrs
+
+  Aprj          :: Arrays arrs
+                => TupleIdx (ArrRepr arrs) a
+                -> Acc arrs
+                -> Acc a
 
   Use           :: Arrays arrs
                 => arrs
@@ -85,6 +92,7 @@ convertOpenAcc :: Layout aenv aenv
 convertOpenAcc alyt acc =
   case acc of
     Atag n      -> AST.Avar (prjLayout n alyt)
+    Aprj ix a   -> AST.Aprj ix (convertOpenAcc alyt a)
     Use arr     -> AST.Use (fromArr arr)
     Map f a     -> AST.Map (convertFun1 alyt f) (convertOpenAcc alyt a)
     Fold f e a  -> AST.Fold (convertFun2 alyt f) (convertExp alyt e) (convertOpenAcc alyt a)
@@ -169,6 +177,16 @@ untup3 :: (Elt a, Elt b, Elt c) => Exp (a, b, c) -> (Exp a, Exp b, Exp c)
 untup3 t = ( SuccTupIdx (SuccTupIdx ZeroTupIdx) `Prj` t
            , SuccTupIdx ZeroTupIdx `Prj` t
            , ZeroTupIdx `Prj` t)
+
+
+unarr2 :: (Arrays arrs, ArrRepr arrs ~ (((), a), b)) => Acc arrs -> (Acc a, Acc b)
+unarr2 t = ( SuccTupIdx ZeroTupIdx `Aprj` t
+           , ZeroTupIdx `Aprj` t )
+
+unarr3 :: (Arrays arrs, ArrRepr arrs ~ ((((), a), b), c)) => Acc arrs -> (Acc a, Acc b, Acc c)
+unarr3 t = ( SuccTupIdx (SuccTupIdx ZeroTupIdx) `Aprj` t
+           , SuccTupIdx ZeroTupIdx `Aprj` t
+           , ZeroTupIdx `Aprj` t)
 
 
 -- Instances

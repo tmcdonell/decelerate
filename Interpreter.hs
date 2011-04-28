@@ -25,6 +25,7 @@ evalOpenAcc acc aenv =
     Alet a b    -> let a' = force $ evalOpenAcc a aenv
                    in  evalOpenAcc b (aenv `Push` a')
     Avar ix     -> delay $ prj ix aenv
+    Aprj ix a   -> delay . evalAprj ix . force $ evalOpenAcc a aenv
     Use arr     -> delay $ toArr arr
     Map f a     -> mapOp (evalFun f aenv) (evalOpenAcc a aenv)
     Fold f x a  -> foldOp (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
@@ -79,6 +80,13 @@ foldOp f e (DelayedArray (sh,n) rf) =
 
 -- Tuples
 -- ------
+
+evalAprj :: Arrays arrs => TupleIdx (ArrRepr arrs) a -> arrs -> a
+evalAprj ix = eval ix . fromArr
+  where
+    eval :: TupleIdx arrs a -> arrs -> a
+    eval ZeroTupIdx       (_,   a) = a
+    eval (SuccTupIdx ix') (tup, _) = eval ix' tup
 
 evalPrj :: IsTuple t => TupleIdx (TupleRepr t) e -> t -> e
 evalPrj ix = eval ix . fromTuple
