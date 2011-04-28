@@ -11,10 +11,9 @@
 module Array.Sugar where
 
 import Array.Data
-import qualified Array.Representation as Repr
-
 import Data.Typeable
-import qualified Data.Vector.Unboxed as V
+import qualified Array.Representation as Repr
+import qualified Data.Vector.Unboxed  as V
 
 
 -- Shapes
@@ -133,9 +132,6 @@ data Array sh e where
         => EltRepr sh
         -> ArrayData (EltRepr e)
         -> Array sh e
-
---  UnitArray ::                             Array sh ()
---  SnocArray :: Array sh a -> Array sh b -> Array sh (a, b)
 
 deriving instance Typeable2 Array
 

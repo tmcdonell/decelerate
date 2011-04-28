@@ -22,8 +22,13 @@ instance Delayable (Array sh e) where
   delay arr@(Array sh _)    = DelayedArray sh (fromElt . (arr!) . toElt)
   force (DelayedArray sh f) = newArray (toElt sh) (toElt . f . fromElt)
 
-instance (Delayable a1, Delayable a2) => Delayable (a1, a2) where
-  data Delayed (a1, a2) = DelayedPair (Delayed a1) (Delayed a2)
-  delay (a1, a2)            = DelayedPair (delay a1) (delay a2)
-  force (DelayedPair a1 a2) = (force a1, force a2)
+instance (Delayable a, Delayable b) => Delayable (a, b) where
+  data Delayed (a, b) = Delayed2 (Delayed a) (Delayed b)
+  delay (a, b)         = Delayed2 (delay a) (delay b)
+  force (Delayed2 a b) = (force a, force b)
+
+instance (Delayable a, Delayable b, Delayable c) => Delayable (a, b, c) where
+  data Delayed (a, b, c) = Delayed3 (Delayed a) (Delayed b) (Delayed c)
+  delay (a, b, c)        = Delayed3 (delay a) (delay b) (delay c)
+  force (Delayed3 a b c) = (force a, force b, force c)
 

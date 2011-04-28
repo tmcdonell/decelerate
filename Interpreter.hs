@@ -7,6 +7,7 @@ module Interpreter where
 import AST
 import Tuple
 import Array.Sugar
+import Array.Arrays
 import Array.Delayed
 import qualified Smart
 
@@ -24,7 +25,7 @@ evalOpenAcc acc aenv =
     Alet a b    -> let a' = force $ evalOpenAcc a aenv
                    in  evalOpenAcc b (aenv `Push` a')
     Avar ix     -> delay $ prj ix aenv
-    Use arr     -> delay $ arr
+    Use arr     -> delay $ toArr arr
     Map f a     -> mapOp (evalFun f aenv) (evalOpenAcc a aenv)
     Fold f x a  -> foldOp (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
 

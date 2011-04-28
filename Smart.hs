@@ -11,8 +11,8 @@ module Smart (
 
 import Tuple
 import Pretty                   ()
-import AST                      (Arrays)
 import Array.Sugar
+import Array.Arrays
 import qualified AST
 
 import Data.Typeable
@@ -85,7 +85,7 @@ convertOpenAcc :: Layout aenv aenv
 convertOpenAcc alyt acc =
   case acc of
     Atag n      -> AST.Avar (prjLayout n alyt)
-    Use arr     -> AST.Use arr
+    Use arr     -> AST.Use (fromArr arr)
     Map f a     -> AST.Map (convertFun1 alyt f) (convertOpenAcc alyt a)
     Fold f e a  -> AST.Fold (convertFun2 alyt f) (convertExp alyt e) (convertOpenAcc alyt a)
 

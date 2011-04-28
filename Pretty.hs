@@ -8,6 +8,7 @@ module Pretty where
 import AST
 import Tuple
 import Array.Sugar
+import Array.Arrays
 import Text.PrettyPrint
 
 
@@ -25,7 +26,7 @@ instance Show (OpenFun env aenv f) where
 -- Array computations
 -- ------------------
 
-prettyOpenAcc :: Int -> (Doc -> Doc) -> OpenAcc aenv a -> Doc
+prettyOpenAcc :: forall aenv a. Int -> (Doc -> Doc) -> OpenAcc aenv a -> Doc
 prettyOpenAcc !alvl wrap acc =
   case acc of
     Avar ix  -> char 'a' <> int (alvl - idxToInt ix - 1)
@@ -37,7 +38,7 @@ prettyOpenAcc !alvl wrap acc =
       sep [ hang (text "let" <+> var <+> char '=') 2 lam
           ,       text "in"  <+> body ]
 
-    Use arrs     -> wrap $ prettyAccOp "use" [ prettyArrays arrs ]
+    Use arrs     -> wrap $ prettyAccOp "use" [ prettyArrays (arrays (undefined::a)) arrs ]
 
     Map f arr    -> wrap $ prettyAccOp "map" [ prettyOpenFun 0 alvl f
                                              , prettyOpenAcc alvl parens arr]
@@ -104,8 +105,8 @@ prettyAccOp :: String -> [Doc] -> Doc
 prettyAccOp name docs = hang (text name) 2 (sep docs)
 
 
-prettyArrays :: Arrays arrs => arrs -> Doc
-prettyArrays = parens . sep . punctuate comma . reverse . collect arrays
+prettyArrays :: ArraysR arrs -> arrs -> Doc
+prettyArrays arrs = parens . sep . punctuate comma . collect arrs
   where
     collect :: ArraysR arrs -> arrs -> [Doc]
     collect ArraysRunit         _        = []

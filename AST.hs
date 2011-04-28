@@ -8,10 +8,8 @@
 module AST where
 
 import Array.Sugar
-import Array.Delayed
+import Array.Arrays
 import Tuple
-
-import Data.Typeable
 
 
 -- Valuation environments and de Bruijn indices
@@ -31,26 +29,6 @@ prj (SuccIdx idx) (Push val _) = prj idx val
 prj _             _            = error "prj: inconsistent valuation"
 
 
--- Arrays
--- ------
-
-class (Typeable arrs, Delayable arrs) => Arrays arrs where
-  arrays :: ArraysR arrs
-
-data ArraysR arrs where
-  ArraysRunit  ::                                   ArraysR ()
-  ArraysRarray :: (Shape sh, Elt e) =>              ArraysR (Array sh e)
-  ArraysRpair  :: ArraysR arrs1 -> ArraysR arrs2 -> ArraysR (arrs1, arrs2)
-
-
-instance Arrays () where
-  arrays = ArraysRunit
-instance (Shape sh, Elt e)    => Arrays (Array sh e) where
-  arrays = ArraysRarray
-instance (Arrays a, Arrays b) => Arrays (a, b) where
-  arrays = ArraysRpair arrays arrays
-
-
 -- Array computations
 -- ------------------
 
@@ -67,7 +45,7 @@ data OpenAcc aenv a where
             -> OpenAcc aenv arrs
 
   Use       :: Arrays arrs
-            => arrs
+            => ArrRepr arrs
             -> OpenAcc aenv arrs
 
   Map       :: (Shape sh, Elt a, Elt r)
