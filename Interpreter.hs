@@ -8,7 +8,6 @@ import AST
 import Tuple
 import Array.Sugar
 import Array.Arrays
-import Array.Delayed
 import qualified Smart
 
 
@@ -16,17 +15,17 @@ import qualified Smart
 -- -----------
 
 run :: Arrays arrs => Smart.Acc arrs -> arrs
-run acc = force $ evalOpenAcc (Smart.convertAcc acc) Empty
+run acc = evalOpenAcc (Smart.convertAcc acc) Empty
 
 
-evalOpenAcc :: Delayable a => OpenAcc aenv a -> Val aenv -> Delayed a
+evalOpenAcc :: OpenAcc aenv a -> Val aenv -> a
 evalOpenAcc acc aenv =
   case acc of
-    Alet a b    -> let a' = force $ evalOpenAcc a aenv
+    Alet a b    -> let a' = evalOpenAcc a aenv
                    in  evalOpenAcc b (aenv `Push` a')
-    Avar ix     -> delay $ prj ix aenv
-    Aprj ix a   -> delay . evalAprj ix . force $ evalOpenAcc a aenv
-    Use arr     -> delay $ toArr arr
+    Avar ix     -> prj ix aenv
+    Aprj ix a   -> evalPrj ix (fromArr $ evalOpenAcc a aenv)
+    Use arr     -> toArr arr
     Map f a     -> mapOp (evalFun f aenv) (evalOpenAcc a aenv)
     Fold f x a  -> foldOp (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
 
@@ -39,10 +38,10 @@ evalOpenExp e env aenv =
     Var ix      -> toElt $ prj ix env
     Const t     -> toElt t
     Tuple t     -> evalTup t env aenv
-    Prj ix t    -> evalPrj ix (evalOpenExp t env aenv)
+    Prj ix t    -> evalPrj ix (fromTuple $ evalOpenExp t env aenv)
     PrimApp f x -> evalPrim f (evalOpenExp x env aenv)
     IndexScalar arr sh
-                -> (force $ evalOpenAcc arr aenv) ! evalOpenExp sh env aenv
+                -> (evalOpenAcc arr aenv) ! evalOpenExp sh env aenv
 
 
 evalFun :: Fun aenv t -> Val aenv -> t
@@ -64,36 +63,27 @@ evalPrim PrimMul = uncurry (*)
 
 mapOp :: (Elt a, Elt b)
       => (a -> b)
-      -> Delayed (Array dim a)
-      -> Delayed (Array dim b)
-mapOp f (DelayedArray sh rf) =
-  DelayedArray sh (sinkFromElt f . rf)
+      -> Array dim a
+      -> Array dim b
+mapOp f arr@(Array sh _) =
+  newArray (toElt sh) (\ix -> f (arr ! ix))
 
 foldOp :: (Elt e, Shape dim)
        => (e -> e -> e)
        -> e
-       -> Delayed (Array (dim:.Int) e)
-       -> Delayed (Array dim e)
-foldOp f e (DelayedArray (sh,n) rf) =
-  DelayedArray sh (\ix -> iter (Z:.n) (\(Z:.i) -> rf (ix,i)) (sinkFromElt2 f) (fromElt e))
+       -> Array (dim:.Int) e
+       -> Array dim e
+foldOp f e arr@(Array (sh,n) _) =
+  newArray (toElt sh) (\ix -> iter (Z:.n) (\(Z:.i) -> arr ! (ix:.i)) f e)
 
 
 -- Tuples
 -- ------
 
-evalAprj :: Arrays arrs => TupleIdx (ArrRepr arrs) a -> arrs -> a
-evalAprj ix = eval ix . fromArr
-  where
-    eval :: TupleIdx arrs a -> arrs -> a
-    eval ZeroTupIdx       (_,   a) = a
-    eval (SuccTupIdx ix') (tup, _) = eval ix' tup
+evalPrj :: TupleIdx t e -> t -> e
+evalPrj ZeroTupIdx       (_,   e) = e
+evalPrj (SuccTupIdx ix') (tup, _) = evalPrj ix' tup
 
-evalPrj :: IsTuple t => TupleIdx (TupleRepr t) e -> t -> e
-evalPrj ix = eval ix . fromTuple
-  where
-    eval :: TupleIdx t e -> t -> e
-    eval ZeroTupIdx       (_,   e) = e
-    eval (SuccTupIdx ix') (tup, _) = eval ix' tup
 
 
 evalTup :: forall env aenv t. IsTuple t

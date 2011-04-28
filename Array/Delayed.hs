@@ -4,6 +4,7 @@ module Array.Delayed where
 
 import Array.Sugar
 
+
 class Delayable a where
   data Delayed a
   delay :: a -> Delayed a
