@@ -53,8 +53,8 @@ type instance EltRepr Z      = ()
 type instance EltRepr Int    = ((), Int)
 type instance EltRepr Float  = ((), Float)
 type instance EltRepr (t:.h)    = (EltRepr t, EltRepr' h)
-type instance EltRepr (a, b)    = (EltRepr a, EltRepr' b)
-type instance EltRepr (a, b, c) = (EltRepr (a, b), EltRepr' c)
+type instance EltRepr (b, a)    = (EltRepr b, EltRepr' a)
+type instance EltRepr (c, b, a) = (EltRepr (c, b), EltRepr' a)
 
 type family EltRepr' a :: *
 type instance EltRepr' ()     = ()
@@ -62,8 +62,8 @@ type instance EltRepr' Z      = ()
 type instance EltRepr' Int    = Int
 type instance EltRepr' Float  = Float
 type instance EltRepr' (t:.h)    = (EltRepr t, EltRepr' h)
-type instance EltRepr' (a, b)    = (EltRepr a, EltRepr' b)
-type instance EltRepr' (a, b, c) = (EltRepr (a, b), EltRepr' c)
+type instance EltRepr' (b, a)    = (EltRepr b, EltRepr' a)
+type instance EltRepr' (c, b, a) = (EltRepr (c, b), EltRepr' a)
 
 
 class ( ArrayElt (EltRepr e), ArrayElt (EltRepr' e)
@@ -104,17 +104,17 @@ instance (Elt t, Elt h) => Elt (t :. h) where
   fromElt  (t:.h) = (fromElt t, fromElt' h)
   fromElt' (t:.h) = (fromElt t, fromElt' h)
 
-instance (Elt a, Elt b) => Elt (a, b) where
-  toElt   (a, b)  = (toElt a, toElt' b)
-  toElt'  (a, b)  = (toElt a, toElt' b)
-  fromElt  (a, b) = (fromElt a, fromElt' b)
-  fromElt' (a, b) = (fromElt a, fromElt' b)
+instance (Elt b, Elt a) => Elt (b, a) where
+  toElt    (b, a) = (toElt b, toElt' a)
+  toElt'   (b, a) = (toElt b, toElt' a)
+  fromElt  (b, a) = (fromElt b, fromElt' a)
+  fromElt' (b, a) = (fromElt b, fromElt' a)
 
-instance (Elt a, Elt b, Elt c) => Elt (a, b, c) where
-  toElt  (ab, c)     = let (a, b) = toElt ab in (a, b, toElt' c)
-  toElt' (ab, c)     = let (a, b) = toElt ab in (a, b, toElt' c)
-  fromElt (a, b, c)  = (fromElt (a, b), fromElt' c)
-  fromElt' (a, b, c) = (fromElt (a, b), fromElt' c)
+instance (Elt c, Elt b, Elt a) => Elt (c, b, a) where
+  toElt    (cb, a)   = let (c, b) = toElt cb in (c, b, toElt' a)
+  toElt'   (cb, a)   = let (c, b) = toElt cb in (c, b, toElt' a)
+  fromElt  (c, b, a) = (fromElt (c, b), fromElt' a)
+  fromElt' (c, b, a) = (fromElt (c, b), fromElt' a)
 
 
 -- Arrays
@@ -137,7 +137,7 @@ deriving instance Typeable2 Array
 
 instance Show (Array sh e) where
   show arr@(Array sh _) =
-    "Array " ++ show (toElt sh :: sh) ++ " " ++ show (toList arr)
+    "Array (" ++ show (toElt sh :: sh) ++ ") " ++ show (toList arr)
 
 toList :: Elt e => Array sh e -> [e]
 toList (Array _ adata) = map toElt (V.toList adata)

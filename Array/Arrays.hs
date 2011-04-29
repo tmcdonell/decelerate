@@ -21,14 +21,14 @@ data ArraysR arrs where
 type family ArrRepr a :: *
 type instance ArrRepr ()           = ()
 type instance ArrRepr (Array sh e) = ((), Array sh e)
-type instance ArrRepr (a, b)       = (ArrRepr a, ArrRepr' b)
-type instance ArrRepr (a, b, c)    = (ArrRepr (a, b), ArrRepr' c)
+type instance ArrRepr (b, a)       = (ArrRepr b, ArrRepr' a)
+type instance ArrRepr (c, b, a)    = (ArrRepr (c, b), ArrRepr' a)
 
 type family ArrRepr' a :: *
 type instance ArrRepr' ()           = ()
 type instance ArrRepr' (Array sh e) = Array sh e
-type instance ArrRepr' (a, b)       = (ArrRepr a, ArrRepr' b)
-type instance ArrRepr' (a, b, c)    = (ArrRepr (a, b), ArrRepr' c)
+type instance ArrRepr' (b, a)       = (ArrRepr b, ArrRepr' a)
+type instance ArrRepr' (c, b, a)    = (ArrRepr (c, b), ArrRepr' a)
 
 
 -- Arrays
@@ -62,21 +62,21 @@ instance (Shape sh, Elt e) => Arrays (Array sh e) where
   fromArr arr     = ((), arr)
   fromArr'        = id
 
-instance (Arrays a, Arrays b) => Arrays (a, b) where
-  arrays  _ = ArraysRpair (arrays (undefined::a)) (arrays' (undefined::b))
-  arrays' _ = ArraysRpair (arrays (undefined::a)) (arrays' (undefined::b))
+instance (Arrays b, Arrays a) => Arrays (b, a) where
+  arrays  _ = ArraysRpair (arrays (undefined::b)) (arrays' (undefined::a))
+  arrays' _ = ArraysRpair (arrays (undefined::b)) (arrays' (undefined::a))
   --
-  toArr  (a, b)   = (toArr a, toArr' b)
-  toArr' (a, b)   = (toArr a, toArr' b)
-  fromArr  (a, b) = (fromArr a, fromArr' b)
-  fromArr' (a, b) = (fromArr a, fromArr' b)
+  toArr    (b, a) = (toArr b, toArr' a)
+  toArr'   (b, a) = (toArr b, toArr' a)
+  fromArr  (b, a) = (fromArr b, fromArr' a)
+  fromArr' (b, a) = (fromArr b, fromArr' a)
 
-instance (Arrays a, Arrays b, Arrays c) => Arrays (a, b, c) where
-  arrays  _ = ArraysRpair (arrays (undefined::(a,b))) (arrays' (undefined::c))
-  arrays' _ = ArraysRpair (arrays (undefined::(a,b))) (arrays' (undefined::c))
+instance (Arrays c, Arrays b, Arrays a) => Arrays (c, b, a) where
+  arrays  _ = ArraysRpair (arrays (undefined::(c,b))) (arrays' (undefined::a))
+  arrays' _ = ArraysRpair (arrays (undefined::(c,b))) (arrays' (undefined::a))
   --
-  toArr  (ab, c)     = let (a, b) = toArr ab in (a, b, toArr' c)
-  toArr' (ab, c)     = let (a, b) = toArr ab in (a, b, toArr' c)
-  fromArr (a, b, c)  = (fromArr (a, b), fromArr' c)
-  fromArr' (a, b, c) = (fromArr (a, b), fromArr' c)
+  toArr    (cb, a)   = let (c, b) = toArr cb in (c, b, toArr' a)
+  toArr'   (cb, a)   = let (c, b) = toArr cb in (c, b, toArr' a)
+  fromArr  (c, b, a) = (fromArr (c, b), fromArr' a)
+  fromArr' (c, b, a) = (fromArr (c, b), fromArr' a)
 
