@@ -5,6 +5,7 @@
 module Interpreter where
 
 import AST
+import Type
 import Tuple
 import Array.Sugar
 import Array.Arrays
@@ -55,8 +56,16 @@ evalOpenFun (Lam  f) env aenv =
 
 
 evalPrim :: PrimFun p -> p
-evalPrim PrimAdd = uncurry (+)
-evalPrim PrimMul = uncurry (*)
+evalPrim (PrimAdd ty) = evalAdd ty
+evalPrim (PrimMul ty) = evalMul ty
+
+evalAdd :: NumType a -> ((a,a) -> a)
+evalAdd (IntegralNumType ty) | IntegralDict <- integralDict ty = uncurry (+)
+evalAdd (FloatingNumType ty) | FloatingDict <- floatingDict ty = uncurry (+)
+
+evalMul:: NumType a -> ((a,a) -> a)
+evalMul (IntegralNumType ty) | IntegralDict <- integralDict ty = uncurry (*)
+evalMul (FloatingNumType ty) | FloatingDict <- floatingDict ty = uncurry (*)
 
 
 -- Array operations

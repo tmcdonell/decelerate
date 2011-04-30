@@ -10,6 +10,7 @@
 
 module Array.Sugar where
 
+import Type
 import Array.Data
 import Data.Typeable
 import qualified Array.Representation as Repr
@@ -69,15 +70,19 @@ type instance EltRepr' (c, b, a) = (EltRepr (c, b), EltRepr' a)
 class ( ArrayElt (EltRepr e), ArrayElt (EltRepr' e)
       , Typeable (EltRepr e), Typeable (EltRepr' e)
       , Typeable e, Show e) => Elt e where
-  toElt    :: EltRepr e -> e
+  eltType  :: e -> TupleType (EltRepr e)
   fromElt  :: e -> EltRepr e
+  toElt    :: EltRepr e -> e
   --
-  toElt'   :: EltRepr' e -> e
+  eltType' :: e -> TupleType (EltRepr' e)
   fromElt' :: e -> EltRepr' e
+  toElt'   :: EltRepr' e -> e
 
 
 #define mkPrimElt(ty)                                                          \
 instance Elt ty where {                                                        \
+; eltType  _    = PairTuple UnitTuple (SingleTuple scalarType)                 \
+; eltType' _    = SingleTuple scalarType                                       \
 ; toElt ((), x) = x                                                            \
 ; fromElt x     = ((), x)                                                      \
 ; toElt'        = id                                                           \
@@ -87,12 +92,16 @@ mkPrimElt(Int)
 mkPrimElt(Float)
 
 instance Elt () where
+  eltType  = const UnitTuple
+  eltType' = const UnitTuple
   toElt    = id
   toElt'   = id
   fromElt  = id
   fromElt' = id
 
 instance Elt Z where
+  eltType     = const UnitTuple
+  eltType'    = const UnitTuple
   toElt    () = Z
   toElt'   () = Z
   fromElt  Z  = ()
@@ -103,18 +112,24 @@ instance (Elt t, Elt h) => Elt (t :. h) where
   toElt'   (t, h) = toElt t :. toElt' h
   fromElt  (t:.h) = (fromElt t, fromElt' h)
   fromElt' (t:.h) = (fromElt t, fromElt' h)
+  eltType  _      = PairTuple (eltType (undefined::t)) (eltType' (undefined::h))
+  eltType' _      = PairTuple (eltType (undefined::t)) (eltType' (undefined::h))
 
 instance (Elt b, Elt a) => Elt (b, a) where
   toElt    (b, a) = (toElt b, toElt' a)
   toElt'   (b, a) = (toElt b, toElt' a)
   fromElt  (b, a) = (fromElt b, fromElt' a)
   fromElt' (b, a) = (fromElt b, fromElt' a)
+  eltType  _      = PairTuple (eltType (undefined::b)) (eltType' (undefined::a))
+  eltType' _      = PairTuple (eltType (undefined::b)) (eltType' (undefined::a))
 
 instance (Elt c, Elt b, Elt a) => Elt (c, b, a) where
   toElt    (cb, a)   = let (c, b) = toElt cb in (c, b, toElt' a)
   toElt'   (cb, a)   = let (c, b) = toElt cb in (c, b, toElt' a)
   fromElt  (c, b, a) = (fromElt (c, b), fromElt' a)
   fromElt' (c, b, a) = (fromElt (c, b), fromElt' a)
+  eltType  _         = PairTuple (eltType (undefined::(c,b))) (eltType' (undefined::a))
+  eltType' _         = PairTuple (eltType (undefined::(c,b))) (eltType' (undefined::a))
 
 
 -- Arrays
@@ -157,11 +172,9 @@ newArray sh f =
 -- Auxiliary
 -- ---------
 
-sinkFromElt :: (Elt a, Elt b)
-            => (a -> b) -> (EltRepr a -> EltRepr b)
+sinkFromElt :: (Elt a, Elt b) => (a -> b) -> (EltRepr a -> EltRepr b)
 sinkFromElt f = fromElt . f . toElt
 
-sinkFromElt2 :: (Elt a, Elt b, Elt c)
-             => (a -> b -> c) -> (EltRepr a -> EltRepr b -> EltRepr c)
+sinkFromElt2 :: (Elt a, Elt b, Elt c) => (a -> b -> c) -> (EltRepr a -> EltRepr b -> EltRepr c)
 sinkFromElt2 f = \x y -> fromElt $ f (toElt x) (toElt y)
 

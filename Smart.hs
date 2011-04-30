@@ -11,6 +11,7 @@ module Smart (
   module Smart
 ) where
 
+import Type
 import Tuple
 import Pretty                   ()
 import Array.Sugar
@@ -212,9 +213,9 @@ instance Show (Exp e) where
 instance Elt e => Eq (Exp e) where
   (==) = error "Prelude.(==) applied to EDSL types"
 
-instance (Num e, Elt e) => Num (Exp e) where
-  x + y       = AST.PrimAdd `PrimApp` tup2 (x,y)
-  x * y       = AST.PrimMul `PrimApp` tup2 (x,y)
+instance (IsNum e, Elt e) => Num (Exp e) where
+  x + y       = AST.PrimAdd numType `PrimApp` tup2 (x,y)
+  x * y       = AST.PrimMul numType `PrimApp` tup2 (x,y)
   fromInteger = Const . fromInteger
 
   abs    = error "abs: not defined"

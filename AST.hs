@@ -7,9 +7,10 @@
 
 module AST where
 
+import Type
+import Tuple
 import Array.Sugar
 import Array.Arrays
-import Tuple
 
 
 -- Valuation environments and de Bruijn indices
@@ -118,6 +119,6 @@ data OpenExp env aenv e where
 
 
 data PrimFun sig where
-  PrimAdd :: Num a => PrimFun ((a, a) -> a)
-  PrimMul :: Num a => PrimFun ((a, a) -> a)
+  PrimAdd :: NumType a -> PrimFun ((a, a) -> a)
+  PrimMul :: NumType a -> PrimFun ((a, a) -> a)
 
