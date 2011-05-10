@@ -38,16 +38,16 @@ prettyOpenAcc !alvl wrap acc =
       sep [ hang (text "let" <+> var <+> char '=') 2 lam
           ,       text "in"  <+> body ]
 
-    Aprj ix arrs -> wrap $ int (tupleIdxToInt ix) <+> prettyOpenAcc alvl parens arrs
-    Atuple tup   -> prettyAtuple alvl tup
-    Use arrs     -> wrap $ prettyAccOp "use" [ prettyArrays (arrays (undefined::a)) arrs ]
+    Aprj ix arrs   -> wrap $ int (tupleIdxToInt ix) <+> prettyOpenAcc alvl parens arrs
+    Atuple tup     -> prettyAtuple alvl tup
+    Use arrs       -> wrap $ prettyAccOp "use" [ prettyArrays (arrays (undefined::a)) arrs ]
 
-    Map _ f arr  -> wrap $ prettyAccOp "map" [ prettyOpenFun 0 alvl f
-                                             , prettyOpenAcc alvl parens arr]
+    Map _ f arr    -> wrap $ prettyAccOp "map" [ prettyOpenFun 0 alvl f
+                                               , prettyOpenAcc alvl parens arr]
 
-    Fold f e arr -> wrap $ prettyAccOp "fold" [ prettyOpenFun 0 alvl f
-                                              , prettyOpenExp 0 alvl parens e
-                                              , prettyOpenAcc alvl parens arr]
+    Fold _ f e arr -> wrap $ prettyAccOp "fold" [ prettyOpenFun 0 alvl f
+                                                , prettyOpenExp 0 alvl parens e
+                                                , prettyOpenAcc alvl parens arr]
 
 
 -- Scalar expressions

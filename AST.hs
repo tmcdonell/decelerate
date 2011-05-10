@@ -64,10 +64,11 @@ data OpenAcc aenv a where
             -> OpenAcc aenv arrs
             -> OpenAcc aenv (Array sh r)
 
-  Fold      :: (Elt e, Shape sh)
-            => Fun aenv (e -> e -> e)
+  Fold      :: (ArraysElt arrs e, Shape sh)
+            => UniformR (sh:.Int) (ArrRepr arrs)
+            -> Fun aenv (e -> e -> e)
             -> Exp aenv e
-            -> OpenAcc aenv (Array (sh:.Int) e)
+            -> OpenAcc aenv arrs
             -> OpenAcc aenv (Array sh e)
 
 

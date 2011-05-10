@@ -30,7 +30,8 @@ evalOpenAcc acc aenv =
     Atuple tup  -> evalAtup tup aenv
     Use arr     -> toArr arr
     Map prf f a -> mapOp prf (evalFun f aenv) (evalOpenAcc a aenv)
-    Fold f x a  -> foldOp (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
+    Fold prf f x a
+                -> foldOp prf (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
 
 
 evalOpenExp :: OpenExp env aenv e -> Val env -> Val aenv -> e
@@ -80,13 +81,15 @@ mapOp :: (ArraysElt arrs a, Shape dim, Elt r)
 mapOp prf f arrs =
   newArray (intersectArrays prf arrs) (f . indexArrays prf arrs)
 
-foldOp :: (Elt e, Shape dim)
-       => (e -> e -> e)
+foldOp :: (ArraysElt arrs e, Shape dim)
+       => UniformR (dim:.Int) (ArrRepr arrs)
+       -> (e -> e -> e)
        -> e
-       -> Array (dim:.Int) e
+       -> arrs
        -> Array dim e
-foldOp f e arr@(Array (sh,n) _) =
-  newArray (toElt sh) (\ix -> iter (Z:.n) (\(Z:.i) -> arr ! (ix:.i)) f e)
+foldOp p f e arrs =
+  let (sh:.n) = intersectArrays p arrs
+  in  newArray sh (\ix -> iter (Z:.n) (\(Z:.i) -> indexArrays p arrs (ix:.i)) f e)
 
 
 -- Arrays

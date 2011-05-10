@@ -59,10 +59,11 @@ data Acc a where
                 -> Acc arrs
                 -> Acc (Array sh b)
 
-  Fold          :: (Elt e, Shape sh)
-                => (Exp e -> Exp e -> Exp e)
+  Fold          :: (ArraysElt arrs e, Shape sh)
+                => UniformR (sh:.Int) (ArrRepr arrs)
+                -> (Exp e -> Exp e -> Exp e)
                 -> Exp e
-                -> Acc (Array (sh:.Int) e)
+                -> Acc arrs
                 -> Acc (Array sh e)
 
 
@@ -97,12 +98,12 @@ convertOpenAcc :: Layout aenv aenv
                -> AST.OpenAcc aenv a
 convertOpenAcc alyt acc =
   case acc of
-    Atag n      -> AST.Avar (prjLayout n alyt)
-    Aprj ix a   -> AST.Aprj ix (convertOpenAcc alyt a)
-    Atuple tup  -> AST.Atuple (convertAtuple alyt tup)
-    Use arr     -> AST.Use (fromArr arr)
-    Map p f a   -> AST.Map p (convertFun1 alyt f) (convertOpenAcc alyt a)
-    Fold f e a  -> AST.Fold (convertFun2 alyt f) (convertExp alyt e) (convertOpenAcc alyt a)
+    Atag n       -> AST.Avar (prjLayout n alyt)
+    Aprj ix a    -> AST.Aprj ix (convertOpenAcc alyt a)
+    Atuple tup   -> AST.Atuple (convertAtuple alyt tup)
+    Use arr      -> AST.Use (fromArr arr)
+    Map p f a    -> AST.Map p (convertFun1 alyt f) (convertOpenAcc alyt a)
+    Fold p f e a -> AST.Fold p (convertFun2 alyt f) (convertExp alyt e) (convertOpenAcc alyt a)
 
 
 convertOpenExp :: forall env aenv e.
