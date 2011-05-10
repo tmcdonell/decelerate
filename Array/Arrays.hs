@@ -100,13 +100,13 @@ instance (Arrays c, Arrays b, Arrays a) => Arrays (c, b, a) where
 
 type family AEltRepr a :: *
 type instance AEltRepr ()           = ()
-type instance AEltRepr (Array sh e) = EltRepr e
+type instance AEltRepr (Array sh e) = ((), e)
 type instance AEltRepr (b, a)       = (AEltRepr b, AEltRepr' a)
 type instance AEltRepr (c, b, a)    = (AEltRepr (c, b), AEltRepr' a)
 
 type family AEltRepr' a :: *
 type instance AEltRepr' ()           = ()
-type instance AEltRepr' (Array sh e) = EltRepr' e
+type instance AEltRepr' (Array sh e) = e
 type instance AEltRepr' (b, a)       = (AEltRepr b, AEltRepr' a)
 type instance AEltRepr' (c, b, a)    = (AEltRepr (c, b), AEltRepr' a)
 
@@ -120,8 +120,8 @@ instance ArraysElt () () where
   toAElt' _ = id
 
 instance (Shape sh, Elt e) => ArraysElt (Array sh e) e where
-  toAElt  _ ((), e) = toElt' e
-  toAElt' _ e       = toElt' e
+  toAElt  _ ((), e) = e
+  toAElt' _ e       = e
 
 instance ( ArraysElt a2 e2, ArraysElt a1 e1 ) => ArraysElt (a2, a1) (e2, e1) where
   toAElt  _ (a2, a1) = (toAElt (undefined::a2) a2, toAElt' (undefined::a1) a1)

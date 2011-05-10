@@ -104,12 +104,12 @@ indexArrays prf arrs sh = toAElt arrs $ indexR prf (fromArr arrs)
   where
     indexR :: UniformR sh a -> a -> AEltRepr a
     indexR UniformRunit         ()       = ()
-    indexR UniformRarray        arr      = fromElt (arr ! sh)
+    indexR UniformRarray        arr      = ((), arr ! sh)
     indexR (UniformRpair r1 r2) (a1, a2) = (indexR r1 a1, indexR' r2 a2)
 
     indexR' :: UniformR sh a -> a -> AEltRepr' a
     indexR' UniformRunit         ()       = ()
-    indexR' UniformRarray        arr      = fromElt' (arr ! sh)
+    indexR' UniformRarray        arr      = arr ! sh
     indexR' (UniformRpair r1 r2) (a1, a2) = (indexR r1 a1, indexR' r2 a2)
 
 
