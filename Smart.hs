@@ -53,9 +53,10 @@ data Acc a where
                 => arrs
                 -> Acc arrs
 
-  Map           :: (Elt a, Elt b, Shape sh)
-                => (Exp a -> Exp b)
-                -> Acc (Array sh a)
+  Map           :: (ArraysElt arrs a, Elt b, Shape sh)
+                => UniformR sh (ArrRepr arrs)
+                -> (Exp a -> Exp b)
+                -> Acc arrs
                 -> Acc (Array sh b)
 
   Fold          :: (Elt e, Shape sh)
@@ -100,7 +101,7 @@ convertOpenAcc alyt acc =
     Aprj ix a   -> AST.Aprj ix (convertOpenAcc alyt a)
     Atuple tup  -> AST.Atuple (convertAtuple alyt tup)
     Use arr     -> AST.Use (fromArr arr)
-    Map f a     -> AST.Map (convertFun1 alyt f) (convertOpenAcc alyt a)
+    Map p f a   -> AST.Map p (convertFun1 alyt f) (convertOpenAcc alyt a)
     Fold f e a  -> AST.Fold (convertFun2 alyt f) (convertExp alyt e) (convertOpenAcc alyt a)
 
 

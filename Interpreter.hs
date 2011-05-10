@@ -9,6 +9,7 @@ import Type
 import Tuple
 import Array.Sugar
 import Array.Arrays
+import qualified Array.Representation as Repr
 import qualified Smart
 
 
@@ -28,7 +29,7 @@ evalOpenAcc acc aenv =
     Aprj ix a   -> evalPrj ix (fromArr $ evalOpenAcc a aenv)
     Atuple tup  -> evalAtup tup aenv
     Use arr     -> toArr arr
-    Map f a     -> mapOp (evalFun f aenv) (evalOpenAcc a aenv)
+    Map prf f a -> mapOp prf (evalFun f aenv) (evalOpenAcc a aenv)
     Fold f x a  -> foldOp (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
 
 
@@ -71,12 +72,13 @@ evalMul (FloatingNumType ty) | FloatingDict <- floatingDict ty = uncurry (*)
 -- Array operations
 -- ----------------
 
-mapOp :: (Elt a, Elt b)
-      => (a -> b)
-      -> Array dim a
-      -> Array dim b
-mapOp f arr@(Array sh _) =
-  newArray (toElt sh) (\ix -> f (arr ! ix))
+mapOp :: (ArraysElt arrs a, Shape dim, Elt r)
+      => UniformR dim (ArrRepr arrs)
+      -> (a -> r)
+      -> arrs
+      -> Array dim r
+mapOp prf f arrs =
+  newArray (intersectArrays prf arrs) (f . indexArrays prf arrs)
 
 foldOp :: (Elt e, Shape dim)
        => (e -> e -> e)
@@ -85,6 +87,40 @@ foldOp :: (Elt e, Shape dim)
        -> Array dim e
 foldOp f e arr@(Array (sh,n) _) =
   newArray (toElt sh) (\ix -> iter (Z:.n) (\(Z:.i) -> arr ! (ix:.i)) f e)
+
+
+-- Arrays
+-- ------
+
+indexArrays :: forall sh arrs e. (ArraysElt arrs e, Shape sh)
+            => UniformR sh (ArrRepr arrs)
+            -> arrs
+            -> sh
+            -> e
+indexArrays prf arrs sh = toAElt arrs $ indexR prf (fromArr arrs)
+  where
+    indexR :: UniformR sh a -> a -> AEltRepr a
+    indexR UniformRunit         ()       = ()
+    indexR UniformRarray        arr      = fromElt (arr ! sh)
+    indexR (UniformRpair r1 r2) (a1, a2) = (indexR r1 a1, indexR' r2 a2)
+
+    indexR' :: UniformR sh a -> a -> AEltRepr' a
+    indexR' UniformRunit         ()       = ()
+    indexR' UniformRarray        arr      = fromElt' (arr ! sh)
+    indexR' (UniformRpair r1 r2) (a1, a2) = (indexR r1 a1, indexR' r2 a2)
+
+
+intersectArrays :: forall arrs sh. (Arrays arrs, Shape sh)
+                => UniformR sh (ArrRepr arrs)
+                -> arrs
+                -> sh
+intersectArrays prf arrs = toElt $ intersectR prf (fromArr arrs)
+  where
+    intersectR :: UniformR sh a -> a -> EltRepr sh
+    intersectR UniformRunit         ()           = Repr.all
+    intersectR UniformRarray        (Array sh _) = sh
+    intersectR (UniformRpair r1 r2) (a1, a2)     =
+      intersectR r1 a1 `Repr.intersect` intersectR r2 a2
 
 
 -- Tuples

@@ -17,7 +17,7 @@ import Array.Arrays
 -- --------------------------------------------
 
 data Idx env t where
-  ZeroIdx ::		  Idx (env, t) t
+  ZeroIdx ::              Idx (env, t) t
   SuccIdx :: Idx env t -> Idx (env, s) t
 
 data Val env where
@@ -58,9 +58,10 @@ data OpenAcc aenv a where
             => ArrRepr arrs
             -> OpenAcc aenv arrs
 
-  Map       :: (Shape sh, Elt a, Elt r)
-            => Fun aenv (a -> r)
-            -> OpenAcc aenv (Array sh a)
+  Map       :: (Shape sh, Elt r, ArraysElt arrs a)
+            => UniformR sh (ArrRepr arrs)
+            -> Fun aenv (a -> r)
+            -> OpenAcc aenv arrs
             -> OpenAcc aenv (Array sh r)
 
   Fold      :: (Elt e, Shape sh)
@@ -72,7 +73,6 @@ data OpenAcc aenv a where
 
 -- Embedded expressions
 -- --------------------
-
 
 type Fun aenv t = OpenFun () aenv t
 

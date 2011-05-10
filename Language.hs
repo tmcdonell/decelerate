@@ -1,10 +1,13 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Language where
 
 import Smart
+import Tuple
 import Array.Sugar
-import Prelude          hiding (map, zipWith, curry, uncurry)
+import Array.Arrays
+import Prelude          hiding (map, zipWith, zipWith3, curry, uncurry)
 
 
 -- Array computations
@@ -15,15 +18,36 @@ use = Use
 
 map :: (Shape sh, Elt a, Elt b)
     => (Exp a -> Exp b) -> Acc (Array sh a) -> Acc (Array sh b)
-map = Map
+map = Map (UniformRpair UniformRunit UniformRarray)
 
-zipWith :: (Shape sh, Elt a, Elt b, Elt c)
+zipWith :: forall sh a b c. (Shape sh, Elt a, Elt b, Elt c)
         => (Exp a -> Exp b -> Exp c)
         -> Acc (Array sh a)
         -> Acc (Array sh b)
         -> Acc (Array sh c)
-zipWith f xs ys = Map (uncurry f) (undefined xs ys)
-    --(Atuple $ NilTup `SnocTup` xs `SnocTup` ys)
+zipWith f xs ys =
+  let arrs :: Acc (Array sh a, Array sh b)
+      arrs = Atuple $ NilTup `SnocTup` xs `SnocTup` ys
+      prf  = UniformRunit `UniformRpair` UniformRarray `UniformRpair` UniformRarray
+  in
+  Map prf (uncurry f) arrs
+
+zipWith3 :: forall sh a b c d. (Shape sh, Elt a, Elt b, Elt c, Elt d)
+         => (Exp a -> Exp b -> Exp c -> Exp d)
+         -> Acc (Array sh a)
+         -> Acc (Array sh b)
+         -> Acc (Array sh c)
+         -> Acc (Array sh d)
+zipWith3 f xs ys zs =
+  let arrs :: Acc (Array sh a, Array sh b, Array sh c)
+      arrs = Atuple $ NilTup `SnocTup` xs `SnocTup` ys `SnocTup` zs
+      prf  = UniformRunit `UniformRpair` UniformRarray
+                          `UniformRpair` UniformRarray
+                          `UniformRpair` UniformRarray
+      f' :: Exp (a, b, c) -> Exp d
+      f' e = let (x,y,z) = untup3 e in f x y z
+  in
+  Map prf f' arrs
 
 
 fold :: (Shape sh, Elt e)

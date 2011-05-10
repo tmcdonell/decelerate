@@ -29,17 +29,19 @@ data tail :. head = tail :. head
 
 
 class (Elt sh, Repr.Shape (EltRepr sh)) => Shape sh where
-  dim     :: sh -> Int
-  size    :: sh -> Int
-  index   :: sh -> sh -> Int
-  unindex :: sh -> Int -> sh
-  iter    :: sh -> (sh -> a) -> (a -> a -> a) -> a -> a
+  dim       :: sh -> Int
+  size      :: sh -> Int
+  intersect :: sh -> sh -> sh
+  index     :: sh -> sh -> Int
+  unindex   :: sh -> Int -> sh
+  iter      :: sh -> (sh -> a) -> (a -> a -> a) -> a -> a
 
-  dim           = Repr.dim . fromElt
-  size          = Repr.size . fromElt
-  index sh ix   = Repr.index (fromElt sh) (fromElt ix)
-  unindex sh n  = toElt $ Repr.unindex (fromElt sh) n
-  iter sh f c r = Repr.iter (fromElt sh) (f . toElt) c r
+  dim               = Repr.dim . fromElt
+  size              = Repr.size . fromElt
+  index sh ix       = Repr.index (fromElt sh) (fromElt ix)
+  unindex sh n      = toElt $ Repr.unindex (fromElt sh) n
+  intersect sh1 sh2 = toElt $ Repr.intersect (fromElt sh1) (fromElt sh2)
+  iter sh f c r     = Repr.iter (fromElt sh) (f . toElt) c r
 
 instance Shape Z
 instance Shape sh => Shape (sh:.Int)
@@ -70,13 +72,13 @@ type instance EltRepr' (c, b, a) = (EltRepr (c, b), EltRepr' a)
 class ( ArrayElt (EltRepr e), ArrayElt (EltRepr' e)
       , Typeable (EltRepr e), Typeable (EltRepr' e)
       , Typeable e, Show e) => Elt e where
-  eltType  :: e -> TupleType (EltRepr e)
-  fromElt  :: e -> EltRepr e
-  toElt    :: EltRepr e -> e
+  eltType  :: e {- dummy -} -> TupleType (EltRepr  e)
+  eltType' :: e {- dummy -} -> TupleType (EltRepr' e)
   --
-  eltType' :: e -> TupleType (EltRepr' e)
-  fromElt' :: e -> EltRepr' e
+  toElt    :: EltRepr  e -> e
   toElt'   :: EltRepr' e -> e
+  fromElt  :: e -> EltRepr  e
+  fromElt' :: e -> EltRepr' e
 
 
 #define mkPrimElt(ty)                                                          \
