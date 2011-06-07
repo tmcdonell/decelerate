@@ -8,6 +8,12 @@ import Array.Sugar
 import Array.Arrays
 
 
+data ArraysType arrs where
+  ArraysTunit  ::                                         ArraysType ()
+  ArraysTarray :: Elt e => TupleType (EltRepr e) ->       ArraysType (Array sh e)
+  ArraysTpair  :: ArraysType arrs1 -> ArraysType arrs2 -> ArraysType (arrs1, arrs2)
+
+
 arrayType :: forall sh e. Array sh e -> TupleType (EltRepr e)
 arrayType (Array _ _) = eltType (undefined::e)
 

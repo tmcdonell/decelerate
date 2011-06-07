@@ -58,15 +58,13 @@ data OpenAcc aenv a where
             => ArrRepr arrs
             -> OpenAcc aenv arrs
 
-  Map       :: (Shape sh, Elt r, ArraysElt arrs a)
-            => UniformR sh (ArrRepr arrs)
-            -> Fun aenv (a -> r)
+  Map       :: (UniformArrays sh arrs a, Elt r)
+            => Fun aenv (a -> r)
             -> OpenAcc aenv arrs
             -> OpenAcc aenv (Array sh r)
 
-  Fold      :: (ArraysElt arrs e, Shape sh)
-            => UniformR (sh:.Int) (ArrRepr arrs)
-            -> Fun aenv (e -> e -> e)
+  Fold      :: (UniformArrays (sh:.Int) arrs e, Shape sh)
+            => Fun aenv (e -> e -> e)
             -> Exp aenv e
             -> OpenAcc aenv arrs
             -> OpenAcc aenv (Array sh e)

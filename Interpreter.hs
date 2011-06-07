@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -29,9 +30,8 @@ evalOpenAcc acc aenv =
     Aprj ix a   -> evalPrj ix (fromArr $ evalOpenAcc a aenv)
     Atuple tup  -> evalAtup tup aenv
     Use arr     -> toArr arr
-    Map prf f a -> mapOp prf (evalFun f aenv) (evalOpenAcc a aenv)
-    Fold prf f x a
-                -> foldOp prf (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
+    Map f a     -> mapOp (evalFun f aenv) (evalOpenAcc a aenv)
+    Fold f x a  -> foldOp (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
 
 
 evalOpenExp :: OpenExp env aenv e -> Val env -> Val aenv -> e
@@ -73,53 +73,52 @@ evalMul (FloatingNumType ty) | FloatingDict <- floatingDict ty = uncurry (*)
 -- Array operations
 -- ----------------
 
-mapOp :: (ArraysElt arrs a, Shape dim, Elt r)
-      => UniformR dim (ArrRepr arrs)
-      -> (a -> r)
+mapOp :: forall sh arrs a r. (UniformArrays sh arrs a, Elt r)
+      => (a -> r)
       -> arrs
-      -> Array dim r
-mapOp prf f arrs =
-  newArray (intersectArrays prf arrs) (f . indexArrays prf arrs)
+      -> Array sh r
+mapOp f arrs =
+  newArray (intersectArrays (undefined::a) arrs) (f . indexArrays arrs)
 
-foldOp :: (ArraysElt arrs e, Shape dim)
-       => UniformR (dim:.Int) (ArrRepr arrs)
-       -> (e -> e -> e)
+foldOp :: forall sh arrs e. (UniformArrays (sh:.Int) arrs e, Shape sh)
+       => (e -> e -> e)
        -> e
        -> arrs
-       -> Array dim e
-foldOp p f e arrs =
-  let (sh:.n) = intersectArrays p arrs
-  in  newArray sh (\ix -> iter (Z:.n) (\(Z:.i) -> indexArrays p arrs (ix:.i)) f e)
+       -> Array sh e
+foldOp f e arrs =
+  let (sh:.n) = intersectArrays e arrs :: (sh:.Int)
+  in  newArray sh (\ix -> iter (Z:.n) (\(Z:.i) -> indexArrays arrs (ix:.i)) f e)
 
 
 -- Arrays
 -- ------
 
-indexArrays :: forall sh arrs e. (ArraysElt arrs e, Shape sh)
-            => UniformR sh (ArrRepr arrs)
-            -> arrs
+indexArrays :: forall sh arrs e. UniformArrays sh arrs e
+            => arrs
             -> sh
             -> e
-indexArrays prf arrs sh = toAElt arrs $ indexR prf (fromArr arrs)
+indexArrays arrs ix
+  = toAElt ix arrs
+  $ indexR (uniform ix arrs (undefined::e)) (fromArr arrs)
   where
-    indexR :: UniformR sh a -> a -> AEltRepr a
-    indexR UniformRunit         ()       = ()
-    indexR UniformRarray        arr      = ((), arr ! sh)
+    indexR :: UniformR sh a e' -> a -> AEltRepr a
+    indexR UniformRunit  ()              = ()
+    indexR UniformRarray arr             = ((), arr ! ix)
     indexR (UniformRpair r1 r2) (a1, a2) = (indexR r1 a1, indexR' r2 a2)
-
-    indexR' :: UniformR sh a -> a -> AEltRepr' a
-    indexR' UniformRunit         ()       = ()
-    indexR' UniformRarray        arr      = arr ! sh
+    --
+    indexR' :: UniformR sh a e' -> a -> AEltRepr' a
+    indexR' UniformRunit  ()              = ()
+    indexR' UniformRarray arr             = arr ! ix
     indexR' (UniformRpair r1 r2) (a1, a2) = (indexR r1 a1, indexR' r2 a2)
 
-
-intersectArrays :: forall arrs sh. (Arrays arrs, Shape sh)
-                => UniformR sh (ArrRepr arrs)
+intersectArrays :: forall arrs sh e. UniformArrays sh arrs e
+                => e    {- dummy -}
                 -> arrs
                 -> sh
-intersectArrays prf arrs = toElt $ intersectR prf (fromArr arrs)
+intersectArrays e arrs
+  = toElt $ intersectR (uniform (undefined::sh) arrs e) (fromArr arrs)
   where
-    intersectR :: UniformR sh a -> a -> EltRepr sh
+    intersectR :: UniformR sh a e' -> a -> EltRepr sh
     intersectR UniformRunit         ()           = Repr.all
     intersectR UniformRarray        (Array sh _) = sh
     intersectR (UniformRpair r1 r2) (a1, a2)     =

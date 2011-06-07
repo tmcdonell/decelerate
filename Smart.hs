@@ -18,6 +18,7 @@ import Array.Sugar
 import Array.Arrays
 import qualified AST
 
+import Prelude                  hiding (curry, uncurry)
 import Data.Typeable
 
 
@@ -53,15 +54,13 @@ data Acc a where
                 => arrs
                 -> Acc arrs
 
-  Map           :: (ArraysElt arrs a, Elt b, Shape sh)
-                => UniformR sh (ArrRepr arrs)
-                -> (Exp a -> Exp b)
+  Map           :: (UniformArrays sh arrs a, Elt b)
+                => (Exp a -> Exp b)
                 -> Acc arrs
                 -> Acc (Array sh b)
 
-  Fold          :: (ArraysElt arrs e, Shape sh)
-                => UniformR (sh:.Int) (ArrRepr arrs)
-                -> (Exp e -> Exp e -> Exp e)
+  Fold          :: (UniformArrays (sh:.Int) arrs e, Shape sh)
+                => (Exp e -> Exp e -> Exp e)
                 -> Exp e
                 -> Acc arrs
                 -> Acc (Array sh e)
@@ -98,12 +97,12 @@ convertOpenAcc :: Layout aenv aenv
                -> AST.OpenAcc aenv a
 convertOpenAcc alyt acc =
   case acc of
-    Atag n       -> AST.Avar (prjLayout n alyt)
-    Aprj ix a    -> AST.Aprj ix (convertOpenAcc alyt a)
-    Atuple tup   -> AST.Atuple (convertAtuple alyt tup)
-    Use arr      -> AST.Use (fromArr arr)
-    Map p f a    -> AST.Map p (convertFun1 alyt f) (convertOpenAcc alyt a)
-    Fold p f e a -> AST.Fold p (convertFun2 alyt f) (convertExp alyt e) (convertOpenAcc alyt a)
+    Atag n        -> AST.Avar (prjLayout n alyt)
+    Aprj ix a     -> AST.Aprj ix (convertOpenAcc alyt a)
+    Atuple tup    -> AST.Atuple (convertAtuple alyt tup)
+    Use arr       -> AST.Use (fromArr arr)
+    Map f a       -> AST.Map (convertFun1 alyt f) (convertOpenAcc alyt a)
+    Fold f e a    -> AST.Fold (convertFun2 alyt f) (convertExp alyt e) (convertOpenAcc alyt a)
 
 
 convertOpenExp :: forall env aenv e.
@@ -170,6 +169,13 @@ convertFun2 alyt f = AST.Lam (AST.Lam (AST.Body openF))
 
 -- Tuples
 -- ------
+
+curry :: (Elt a, Elt b) => (Exp (a, b) -> Exp c) -> Exp a -> Exp b -> Exp c
+curry f x y = f $ tup2 (x,y)
+
+uncurry :: (Elt a, Elt b) => (Exp a -> Exp b -> Exp c) -> Exp (a, b) -> Exp c
+uncurry f t = let (x, y) = untup2 t in f x y
+
 
 tup2 :: (Elt a, Elt b) => (Exp a, Exp b) -> Exp (a, b)
 tup2 (x, y) = Tuple $ NilTup `SnocTup` x `SnocTup` y
