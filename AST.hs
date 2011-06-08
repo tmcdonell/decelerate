@@ -76,21 +76,21 @@ data OpenAcc aenv a where
 type Fun aenv t = OpenFun () aenv t
 
 data OpenFun env aenv t where
-  Body :: OpenExp env aenv t              -> OpenFun env aenv t
+  Body :: OpenExp env aenv t      -> OpenFun env aenv t
   Lam  :: Elt a
-       => OpenFun (env, EltRepr a) aenv t -> OpenFun env aenv (a -> t)
+       => OpenFun (env, a) aenv t -> OpenFun env aenv (a -> t)
 
 
 type Exp aenv e = OpenExp () aenv e
 
 data OpenExp env aenv e where
   Let         :: Elt t
-              => OpenExp env              aenv t
-              -> OpenExp (env, EltRepr t) aenv e
-              -> OpenExp env              aenv e
+              => OpenExp env      aenv t
+              -> OpenExp (env, t) aenv e
+              -> OpenExp env      aenv e
 
   Var         :: Elt t
-              => Idx env (EltRepr t)
+              => Idx env t
               -> OpenExp env aenv t
 
   Const       :: Elt t

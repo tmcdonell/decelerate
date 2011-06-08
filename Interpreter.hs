@@ -38,8 +38,8 @@ evalOpenExp :: OpenExp env aenv e -> Val env -> Val aenv -> e
 evalOpenExp e env aenv =
   case e of
     Let x b     -> let x' = evalOpenExp x env aenv
-                   in  evalOpenExp b (env `Push` fromElt x') aenv
-    Var ix      -> toElt $ prj ix env
+                   in  evalOpenExp b (env `Push` x') aenv
+    Var ix      -> prj ix env
     Const t     -> toElt t
     Tuple t     -> evalTup t env aenv
     Prj ix t    -> evalPrj ix (fromTuple $ evalOpenExp t env aenv)
@@ -54,7 +54,7 @@ evalFun f aenv = evalOpenFun f Empty aenv
 evalOpenFun :: OpenFun env aenv t -> Val env -> Val aenv -> t
 evalOpenFun (Body e) env aenv = evalOpenExp e env aenv
 evalOpenFun (Lam  f) env aenv =
-  \x -> evalOpenFun f (env `Push` fromElt x) aenv
+  \x -> evalOpenFun f (env `Push` x) aenv
 
 
 evalPrim :: PrimFun p -> p
