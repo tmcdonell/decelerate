@@ -122,6 +122,7 @@ data OpenExp env aenv e where
 
 
 data PrimFun sig where
-  PrimAdd :: NumType a -> PrimFun ((a, a) -> a)
-  PrimMul :: NumType a -> PrimFun ((a, a) -> a)
+  PrimAdd     :: NumType a -> PrimFun ((a, a) -> a)
+  PrimMul     :: NumType a -> PrimFun ((a, a) -> a)
+  PrimFromInt :: IntegralType a -> NumType b -> PrimFun (a -> b)
 

@@ -59,8 +59,9 @@ evalOpenFun (Lam  f) env aenv =
 
 
 evalPrim :: PrimFun p -> p
-evalPrim (PrimAdd ty) = evalAdd ty
-evalPrim (PrimMul ty) = evalMul ty
+evalPrim (PrimAdd ty)        = evalAdd ty
+evalPrim (PrimMul ty)        = evalMul ty
+evalPrim (PrimFromInt ta tb) = evalFromInt ta tb
 
 evalAdd :: NumType a -> ((a,a) -> a)
 evalAdd (IntegralNumType ty) | IntegralDict <- integralDict ty = uncurry (+)
@@ -69,6 +70,14 @@ evalAdd (FloatingNumType ty) | FloatingDict <- floatingDict ty = uncurry (+)
 evalMul:: NumType a -> ((a,a) -> a)
 evalMul (IntegralNumType ty) | IntegralDict <- integralDict ty = uncurry (*)
 evalMul (FloatingNumType ty) | FloatingDict <- floatingDict ty = uncurry (*)
+
+evalFromInt :: IntegralType a -> NumType b -> (a -> b)
+evalFromInt ta (IntegralNumType tb)
+  | IntegralDict <- integralDict ta
+  , IntegralDict <- integralDict tb = fromIntegral
+evalFromInt ta (FloatingNumType tb)
+  | IntegralDict <- integralDict ta
+  , FloatingDict <- floatingDict tb = fromIntegral
 
 
 -- Array operations

@@ -4,16 +4,16 @@
 module Language (
 
   -- Array functions
-  use, map, zipWith, zipWith3, fold,
+  use, unit, map, zipWith, zipWith3, fold,
 
   -- Scalar functions
-  (!), constant, curry, uncurry
+  (!), constant, curry, uncurry, fromIntegral
 
 ) where
 
 import Smart
 import Array.Sugar      hiding ((!))
-import Prelude          hiding (map, zipWith, zipWith3, curry, uncurry)
+import Prelude          hiding (map, zipWith, zipWith3, curry, uncurry, fromIntegral)
 
 
 -- Array computations

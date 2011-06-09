@@ -214,6 +214,13 @@ unarr3 t = ( SuccTupIdx (SuccTupIdx ZeroTupIdx) `Aprj` t
            , ZeroTupIdx `Aprj` t)
 
 
+-- Conversions
+-- -----------
+
+fromIntegral :: (Elt a, Elt b, IsIntegral a, IsFloating b) => Exp a -> Exp b
+fromIntegral x = AST.PrimFromInt integralType numType `PrimApp` x
+
+
 -- Instances
 -- ---------
 

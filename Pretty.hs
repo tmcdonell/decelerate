@@ -87,8 +87,9 @@ prettyOpenExp !lvl !alvl wrap e =
                                      , prettyOpenExp lvl alvl parens sh ]
 
 prettyPrim :: PrimFun a -> Doc
-prettyPrim (PrimAdd _) = text "(+)"
-prettyPrim (PrimMul _) = text "(*)"
+prettyPrim (PrimAdd _)       = text "(+)"
+prettyPrim (PrimMul _)       = text "(*)"
+prettyPrim (PrimFromInt _ _) = text "fromIntegral"
 
 
 -- Tuples
