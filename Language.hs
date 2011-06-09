@@ -22,6 +22,9 @@ import Prelude          hiding (map, zipWith, zipWith3, curry, uncurry)
 use :: Arrays arrs => arrs -> Acc arrs
 use = Use
 
+unit :: Elt e => Exp e -> Acc (Scalar e)
+unit = Unit
+
 map :: (Shape sh, Elt a, Elt b)
     => (Exp a -> Exp b) -> Acc (Array sh a) -> Acc (Array sh b)
 map = Map

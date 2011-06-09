@@ -58,6 +58,10 @@ data OpenAcc aenv a where
             => ArrRepr arrs
             -> OpenAcc aenv arrs
 
+  Unit      :: Elt e
+            => Exp aenv e
+            -> OpenAcc aenv (Scalar e)
+
   Map       :: (UniformArrays sh arrs a, Elt r)
             => Fun aenv (a -> r)
             -> OpenAcc aenv arrs

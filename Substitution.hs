@@ -86,6 +86,7 @@ liftOpenAccA n acc =
     Aprj ix a   -> Aprj ix (liftOpenAccA n a)
     Atuple tup  -> Atuple (liftATupleA n tup)
     Use a       -> Use a
+    Unit e      -> Unit (liftOpenExpA n e)
     Map f a     -> Map (liftOpenFunA n f) (liftOpenAccA n a)
     Fold f e a  -> Fold (liftOpenFunA n f) (liftOpenExpA n e) (liftOpenAccA n a)
 
@@ -181,6 +182,7 @@ subOpenAccA n acc into =
 
     Aprj ix a   -> Aprj ix (subOpenAccA n acc a)
     Use a       -> Use a
+    Unit e      -> Unit (subOpenExpA n acc e)
     Atuple tup  -> Atuple (subAtupleA n acc tup)
     Map f a     -> Map (subOpenFunA n acc f) (subOpenAccA n acc a)
     Fold f e a  -> Fold (subOpenFunA n acc f) (subOpenExpA n acc e) (subOpenAccA n acc a)
@@ -280,6 +282,7 @@ extendOpenAccA prf acc =
     Aprj ix a   -> Aprj ix (extendOpenAccA prf a)
     Atuple tup  -> Atuple (extendAtupleA prf tup)
     Use a       -> Use a
+    Unit e      -> Unit (extendOpenExpA prf e)
     Map f a     -> Map (extendOpenFunA prf f) (extendOpenAccA prf a)
     Fold f e a  -> Fold (extendOpenFunA prf f) (extendOpenExpA prf e) (extendOpenAccA prf a)
 

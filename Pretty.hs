@@ -42,6 +42,8 @@ prettyOpenAcc !alvl wrap acc =
     Atuple tup     -> prettyAtuple alvl tup
     Use arrs       -> wrap $ prettyAccOp "use" [ prettyArrays (arrays (undefined::a)) arrs ]
 
+    Unit e         -> wrap $ prettyAccOp "unit" [ prettyOpenExp 0 alvl parens e ]
+
     Map f arr      -> wrap $ prettyAccOp "map" [ prettyOpenFun 0 alvl f
                                                , prettyOpenAcc alvl parens arr]
 

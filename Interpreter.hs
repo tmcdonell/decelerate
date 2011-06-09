@@ -30,6 +30,7 @@ evalOpenAcc acc aenv =
     Aprj ix a   -> evalPrj ix (fromArr $ evalOpenAcc a aenv)
     Atuple tup  -> evalAtup tup aenv
     Use arr     -> toArr arr
+    Unit e      -> unitOp (evalOpenExp e Empty aenv)
     Map f a     -> mapOp (evalFun f aenv) (evalOpenAcc a aenv)
     Fold f x a  -> foldOp (evalFun f aenv) (evalOpenExp x Empty aenv) (evalOpenAcc a aenv)
 
@@ -72,6 +73,11 @@ evalMul (FloatingNumType ty) | FloatingDict <- floatingDict ty = uncurry (*)
 
 -- Array operations
 -- ----------------
+
+unitOp :: Elt e
+       => e
+       -> Scalar e
+unitOp e = newArray Z (const e)
 
 mapOp :: forall sh arrs a r. (UniformArrays sh arrs a, Elt r)
       => (a -> r)
