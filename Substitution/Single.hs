@@ -8,7 +8,7 @@
 -- Adapted from work originally by Sean Seefried.
 --
 
-module Substitution (
+module Substitution.Single (
   Cat,
   substituteOpenAcc, substituteOpenExp
 ) where
