@@ -4,7 +4,7 @@
 module Language (
 
   -- Array functions
-  use, unit, map, zipWith, zipWith3, fold,
+  use, unit, the, map, zipWith, zipWith3, fold,
 
   -- Scalar functions
   (!), constant, curry, uncurry, fromIntegral
@@ -24,6 +24,9 @@ use = Use
 
 unit :: Elt e => Exp e -> Acc (Scalar e)
 unit = Unit
+
+the :: Elt e => Acc (Scalar e) -> Exp e
+the = (! constant Z)
 
 map :: (Shape sh, Elt a, Elt b)
     => (Exp a -> Exp b) -> Acc (Array sh a) -> Acc (Array sh b)
