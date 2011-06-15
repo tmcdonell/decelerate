@@ -91,8 +91,18 @@ compose _              _              = error "impossible evaluation"
 -- a recursive case. Use this instead, which will work for our unary functions.
 --
 extend :: Idx (env, s) t -> OpenExp ((env, s'), s) aenv t
-extend ZeroIdx      = Var ZeroIdx
-extend (SuccIdx ix) = expOut $ weaken (I (SuccIdx ix))
+extend = shift (varIn . SuccIdx) . varIn
+
+
+{--
+foo :: OpenFun env aenv t
+    -> OpenExp env aenv s
+    -> OpenFun env aenv t
+foo fun exp =
+  case fun of
+    Lam  f -> Lam  $ foo f (weaken exp)
+    Body e -> Body $ substitute (weaken e) exp
+--}
 
 
 -- NOTE: [Renaming and Substitution]
@@ -104,12 +114,18 @@ extend (SuccIdx ix) = expOut $ weaken (I (SuccIdx ix))
 --   v :: forall t. Idx env t -> f env' aenv t
 --
 -- The crafty bit is that 'f' might represent variables (for renaming) or terms
--- (for substitutions). We then lift this to an operation which traverses terms
--- and rebuild them after applying 'v' to the variables
+-- (for substitutions). The demonic forall, --- which is to say that the
+-- quantifier is in a position which gives us obligation, not opportunity ---
+-- forces us to respect type: when pattern matching detects the variable we care
+-- about, happily we discover that it has the type we must respect. The demon is
+-- not so free to mess with us as one might fear at first.
 --
---   rebuild v :: forall t. OpenExp env aenv t -> OpenExp env' aenv t
+-- We then lift this to an operation which traverses terms and rebuild them
+-- after applying 'v' to the variables:
 --
--- The following class tells us what we need to know about 'f' if we want to be
+--   rebuild v :: OpenExp env aenv t -> OpenExp env' aenv t
+--
+-- The Syntactic class tells us what we need to know about 'f' if we want to be
 -- able to rebuild terms. In essence, the crucial functionality is to propagate
 -- a class of operations on variables that is closed under shifting.
 --
