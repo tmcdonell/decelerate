@@ -21,7 +21,7 @@ data Idx env t where
   SuccIdx :: Idx env t -> Idx (env, s) t
 
 data Val env where
-  Empty :: Val ()
+  Empty ::                 Val ()
   Push  :: Val env -> t -> Val (env, t)
 
 prj :: Idx env t -> Val env -> t
@@ -41,8 +41,7 @@ data OpenAcc aenv a where
             -> OpenAcc (aenv, as) bs
             -> OpenAcc aenv bs
 
-  Avar      :: Arrays arrs
-            => Idx aenv arrs
+  Avar      :: Idx aenv arrs
             -> OpenAcc aenv arrs
 
   Aprj      :: Arrays arrs
@@ -93,8 +92,7 @@ data OpenExp env aenv e where
               -> OpenExp (env, t) aenv e
               -> OpenExp env      aenv e
 
-  Var         :: Elt t
-              => Idx env t
+  Var         :: Idx env t
               -> OpenExp env aenv t
 
   Const       :: Elt t
