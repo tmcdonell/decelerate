@@ -10,7 +10,7 @@
 
 module Substitution.Single (
   Cat,
-  substituteOpenAcc, substituteOpenExp
+  substituteOpenAcc, substituteOpenExp, substituteOpenExpIntoOpenFun
 ) where
 
 import AST
@@ -41,8 +41,8 @@ data s :=: t where
   Refl :: s :=: s
 
 
--- Testing and extending indices
--- -----------------------------
+-- Testing and renaming indices
+-- ----------------------------
 
 equiv :: Insert env benv s -> Idx (Cat (env, s) benv) t -> Maybe (s :=: t)
 equiv Base      ZeroIdx       = Just Refl
@@ -175,11 +175,11 @@ subOpenAccA :: Insert aenv baenv s
             -> OpenAcc (Cat aenv      baenv) t
 subOpenAccA n acc into =
   case into of
-    Alet a b    -> Alet (subOpenAccA n acc a) (subOpenAccA (Shift n) (liftOpenAccA Base acc) b)
     Avar ix
       | Just Refl <- equiv n ix -> acc
       | otherwise               -> Avar (sink n ix)
 
+    Alet a b    -> Alet (subOpenAccA n acc a) (subOpenAccA (Shift n) (liftOpenAccA Base acc) b)
     Aprj ix a   -> Aprj ix (subOpenAccA n acc a)
     Use a       -> Use a
     Unit e      -> Unit (subOpenExpA n acc e)
@@ -241,11 +241,11 @@ subOpenExpE :: Insert env benv s
             -> OpenExp (Cat env      benv) aenv t
 subOpenExpE n exp into =
   case into of
-    Let a b          -> Let (subOpenExpE n exp a) (subOpenExpE (Shift n) (liftOpenExpE Base exp) b)
     Var ix
       | Just Refl <- equiv n ix -> exp
       | otherwise               -> Var (sink n ix)
 
+    Let a b          -> Let (subOpenExpE n exp a) (subOpenExpE (Shift n) (liftOpenExpE Base exp) b)
     Const c          -> Const c
     Prj ix e         -> Prj ix (subOpenExpE n exp e)
     Tuple tup        -> Tuple (subTupleE n exp tup)
@@ -261,6 +261,16 @@ subTupleE n exp tup =
   case tup of
     NilTup      -> NilTup
     SnocTup t e -> subTupleE n exp t `SnocTup` subOpenExpE n exp e
+
+
+subOpenFunE :: Insert env benv s
+            -> OpenExp (Cat env      benv) aenv s
+            -> OpenFun (Cat (env, s) benv) aenv t
+            -> OpenFun (Cat env      benv) aenv t
+subOpenFunE n exp fun =
+  case fun of
+    Body e -> Body (subOpenExpE n exp e)
+    Lam  f -> Lam  (subOpenFunE (Shift n) (liftOpenExpE Base exp) f)
 
 
 -- Extending environments
@@ -344,6 +354,15 @@ extendOpenExpE prf exp =
     IndexScalar a ix -> IndexScalar a (extendOpenExpE prf ix)
 
 
+extendOpenFunE :: env {- dummy -}
+               -> OpenFun (env', s)         aenv t
+               -> OpenFun (Cat env env', s) aenv t
+extendOpenFunE prf fun =
+  case fun of
+    Body e -> Body (extendOpenExpE prf e)
+    Lam  f -> Lam  (extendOpenFunE prf f)
+
+
 extendTupleE :: env {- dummy -}
              -> Tuple (OpenExp (env', s)         aenv) t
              -> Tuple (OpenExp (Cat env env', s) aenv) t
@@ -372,4 +391,20 @@ substituteOpenExp :: forall env env' aenv s t.
                   -> OpenExp (Cat env env') aenv t
 substituteOpenExp into exp =
   subOpenExpE Base exp (extendOpenExpE (undefined::env) into)
+
+substituteOpenExpIntoOpenFun :: forall env env' aenv s t.
+                     OpenFun (env', s)      aenv t
+                  -> OpenExp (Cat env env') aenv s
+                  -> OpenFun (Cat env env') aenv t
+substituteOpenExpIntoOpenFun fun exp =
+  subOpenFunE Base exp (extendOpenFunE (undefined::env) fun)
+
+
+-- Compose closed unary functions
+--
+dot :: Fun aenv (b -> c)
+    -> Fun aenv (a -> b)
+    -> Fun aenv (a -> c)
+Lam (Body f) `dot` Lam (Body g) = Lam . Body $ substituteOpenExp f g
+_            `dot` _            = error "impossible evaluation"
 
