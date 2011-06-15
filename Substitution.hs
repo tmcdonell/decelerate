@@ -1,25 +1,18 @@
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE GADTs #-}
 
-module Substitution (substitute, dot) where
+module Substitution (substitute, compose) where
 
 import AST
 import Tuple
 import Prelude hiding (exp)
 
 
--- Concatenation of two type environments, represented as nested tuples
---
-type family Cat env env'
-type instance Cat env ()        = env
-type instance Cat env (env', s) = (Cat env env', s)
-
 -- Wrappers around indices and array expressions such that our Syntactic
 -- elements have the same kind. The second environment is propagated unchanged.
 --
 newtype Idx'     env env' t = I { unI :: Idx env t }
-newtype OpenAcc' env env' a = A { unA :: OpenAcc env a }
+--newtype OpenAcc' env env' a = A { unA :: OpenAcc env a }
 
 -- SEE: [Renaming and Substitution]
 -- SEE: [Weakening]
@@ -75,9 +68,9 @@ rebuildT v tup =
 
 -- Replace the first variable (ZeroIdx) with the given expression.
 --
-substitute :: OpenExp (env', s) aenv t
-           -> OpenExp env'      aenv s
-           -> OpenExp env'      aenv t
+substitute :: OpenExp (env, s) aenv t
+           -> OpenExp env      aenv s
+           -> OpenExp env      aenv t
 substitute f g = rebuild (subTop g) f
   where
     subTop :: OpenExp env aenv s -> Idx (env, s) t -> OpenExp env aenv t
@@ -85,18 +78,21 @@ substitute f g = rebuild (subTop g) f
     subTop _ (SuccIdx ix) = Var ix
 
 
--- Composition of closed unary functions
+-- Composition of unary functions
 --
-dot :: Fun aenv (b -> c)
-    -> Fun aenv (a -> b)
-    -> Fun aenv (a -> c)
-Lam (Body f) `dot` Lam (Body g) = Lam . Body $ substitute (rebuild (Var . extend undefined) f) g
-_            `dot` _            = error "impossible evaluation"
+compose :: OpenFun env aenv (b -> c)
+        -> OpenFun env aenv (a -> b)
+        -> OpenFun env aenv (a -> c)
+compose (Lam (Body f)) (Lam (Body g)) = Lam . Body $ substitute (rebuild extend f) g
+compose _              _              = error "impossible evaluation"
 
-extend :: env' -> Idx (env, s) t -> Idx (Cat env' env, s) t
-extend _ ZeroIdx               = ZeroIdx
-extend _ (SuccIdx ZeroIdx)     = SuccIdx ZeroIdx
-extend x (SuccIdx (SuccIdx n)) = SuccIdx (extend x (SuccIdx n))
+
+-- We don't have shift or weaken for OpenFun, which we would otherwise apply in
+-- a recursive case. Use this instead, which will work for our unary functions.
+--
+extend :: Idx (env, s) t -> OpenExp ((env, s'), s) aenv t
+extend ZeroIdx      = Var ZeroIdx
+extend (SuccIdx ix) = expOut $ weaken (I (SuccIdx ix))
 
 
 -- NOTE: [Renaming and Substitution]
