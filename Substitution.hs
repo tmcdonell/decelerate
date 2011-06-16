@@ -66,7 +66,8 @@ rebuildT v tup =
     SnocTup t e -> rebuildT v t `SnocTup` rebuild v e
 
 
--- Replace the first variable (ZeroIdx) with the given expression.
+-- Replace the first variable (ZeroIdx) with the given expression. The
+-- environment shrinks.
 --
 substitute :: OpenExp (env, s) aenv t
            -> OpenExp env      aenv s
@@ -78,31 +79,18 @@ substitute f g = rebuild (subTop g) f
     subTop _ (SuccIdx ix) = Var ix
 
 
--- Composition of unary functions
+-- Composition of unary functions.
 --
 compose :: OpenFun env aenv (b -> c)
         -> OpenFun env aenv (a -> b)
         -> OpenFun env aenv (a -> c)
-compose (Lam (Body f)) (Lam (Body g)) = Lam . Body $ substitute (rebuild extend f) g
+compose (Lam (Body f)) (Lam (Body g)) = Lam . Body $ rebuild (dot g) f
+  where
+    dot :: OpenExp (env, a) aenv b -> Idx (env, b) c -> OpenExp (env, a) aenv c
+    dot s ZeroIdx      = s
+    dot _ (SuccIdx ix) = Var (SuccIdx ix)
+
 compose _              _              = error "impossible evaluation"
-
-
--- We don't have shift or weaken for OpenFun, which we would otherwise apply in
--- a recursive case. Use this instead, which will work for our unary functions.
---
-extend :: Idx (env, s) t -> OpenExp ((env, s'), s) aenv t
-extend = shift (varIn . SuccIdx) . varIn
-
-
-{--
-foo :: OpenFun env aenv t
-    -> OpenExp env aenv s
-    -> OpenFun env aenv t
-foo fun exp =
-  case fun of
-    Lam  f -> Lam  $ foo f (weaken exp)
-    Body e -> Body $ substitute (weaken e) exp
---}
 
 
 -- NOTE: [Renaming and Substitution]
@@ -139,7 +127,7 @@ foo fun exp =
 -- operation of shifting things from one scope to a larger scope in which new
 -- things have become meaningful, but no old things have vanished.
 --
--- When we use a named representation (or HOAS) we get weakening for free, we
--- get this for free. But in the de Bruijn representation weakening takes work:
--- you have to shift all variables references to make room for the new bindings.
+-- When we use a named representation (or HOAS) we get weakening for free. But
+-- in the de Bruijn representation weakening takes work: you have to shift all
+-- variables references to make room for the new bindings.
 --
